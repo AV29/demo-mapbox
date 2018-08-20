@@ -68,6 +68,7 @@
   "dependencies": {
     "babel-polyfill": "~6.26.0",
     "classnames": "~2.2.5",
+    "immutable": "^3.8.2",
     "mapbox-gl": "^0.44.2",
     "react": "~16.1.0",
     "react-dom": "~16.1.0"

@@ -1,0 +1,53 @@
+@import '../../styles/variables';
+
+
+.layerName {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-right: 10px;
+}
+
+.layers {
+  padding: 15px;
+  background: white;
+  border-radius: 5px;
+  height: 100%;
+  overflow: auto;
+  button {
+    min-width: 70px;
+    margin-right: 5px;
+    background: transparent;
+    border-radius: 5px;
+    outline: 0;
+    border: 1px solid lightgrey;
+    padding: 5px 15px;
+    cursor: pointer;
+    font-size: 10px;
+    &.visible {
+      background-color: greenyellow;
+    }
+    &.hidden {
+      background-color: tomato;
+    }
+  }
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+}
+
+.layer {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview {
+  width: 15px;
+  height: 15px;
+  margin-left: 10px;
+  border-radius: 50%;
+}
+
