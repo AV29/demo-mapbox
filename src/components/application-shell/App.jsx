@@ -2,15 +2,16 @@ import React, {Component} from 'react';
 import {fromJS} from 'immutable';
 import Layers from './Layers';
 import MapboxGl from 'mapbox-gl';
+import classNames from 'classnames';
 import styles from './App.less';
 
 const LAYER_NAME = 'DEMO_LAYER';
 
 class MapBox extends Component {
 
-  static generateSource(limit) {
+  static generateSource(pointsPerLayer) {
     const data = [];
-    for (let i = 0; i < limit; i += 1) {
+    for (let i = 0; i < pointsPerLayer; i += 1) {
       const currentFeature = {
         lt: Math.random() * 100 + 100,
         lg: Math.random() * 180,
@@ -35,12 +36,16 @@ class MapBox extends Component {
 
     this.layersConfiguration = {
       layersAmount: 2,
-      featuresAmount: 1000
+      pointsPerLayer: 1000
     };
+
+    this.pointsPerLayer = null;
+    this.layersAmount = null;
 
     this.state = {
       layers: fromJS([]),
       ready: false,
+      result: 0,
       defaultOptions: {
         failIfMajorPerformanceCaveat: true
       },
@@ -48,18 +53,19 @@ class MapBox extends Component {
       mapboxApiAccessToken: 'pk.eyJ1IjoibGxhbWFzb2Z0IiwiYSI6ImNqZm83cnJuODAxdHUzMnBtNGdjdnJmbHcifQ.FaBPhi3i57XdDfj5pleNJg'
     };
 
-
     this.handleLoaded = this.handleLoaded.bind(this);
+    this.handleRendered = this.handleRendered.bind(this);
     this.handleChangeColor = this.handleChangeColor.bind(this);
+    this.handleApplyNewLayers = this.handleApplyNewLayers.bind(this);
     this.handleMoveLayerOnTop = this.handleMoveLayerOnTop.bind(this);
     this.handleChangeVisibility = this.handleChangeVisibility.bind(this);
   }
 
   /* --------------------------------------------- React LifeCycle ---------------------------------------------------*/
   componentDidMount() {
-    const {defaultStyle, mapboxApiAccessToken, defaultOptions} = this.state;
+    const {mapboxApiAccessToken} = this.state;
     MapboxGl.accessToken = mapboxApiAccessToken;
-    this.initialize('map', defaultStyle, defaultOptions);
+    this.initialize(this.layersConfiguration);
   }
 
   componentWillUnmount() {
@@ -68,11 +74,19 @@ class MapBox extends Component {
 
   /* ----------------------------------------------- Core Actions ----------------------------------------------------*/
 
-  initialize(container, style, options) {
+  initialize(layersConfiguration) {
     const zoom = 2;
     const center = [93, 50];
-    this.map = new MapboxGl.Map({style, container, zoom, center, ...options});
-    this.map.once('load', this.handleLoaded);
+    this.setTiming();
+    this.map = new MapboxGl.Map({
+      style: this.state.defaultStyle,
+      container: 'map',
+      zoom,
+      center,
+      ...this.state.defaultOptions
+    });
+    this.map.on('render', this.handleRendered);
+    this.map.once('load', () => this.handleLoaded(layersConfiguration));
   }
 
   destroy() {
@@ -80,9 +94,21 @@ class MapBox extends Component {
     this.map = null;
   }
 
-  handleLoaded() {
+  handleLoaded(layersConfiguration) {
     this.map.resize();
-    this.attachLayers(this.layersConfiguration);
+    this.attachLayers(layersConfiguration);
+  }
+
+  handleRendered() {
+    this.getTiming();
+  }
+
+  getTiming() {
+    this.setState({result: performance.now() - this.start});
+  }
+
+  setTiming() {
+    this.start = performance.now();
   }
 
   setStyle(layerName, propName, value) {
@@ -114,23 +140,34 @@ class MapBox extends Component {
     this.setState(({layers}) => ({layers: layers.delete(targetLayerIndex).insert(0, this.state.layers.get(targetLayerIndex))}));
   }
 
-  attachLayers({layersAmount, featuresAmount}) {
+  handleApplyNewLayers() {
+    const layersConfiguration = {
+      layersAmount: parseInt(this.layersAmount.value),
+      pointsPerLayer: parseInt(this.pointsPerLayer.value)
+    };
+    this.destroy();
+    this.initialize(layersConfiguration);
+  }
+
+  attachLayers({layersAmount, pointsPerLayer}) {
     let layers = fromJS([]);
+    const mapBoxLayers = [];
     for (let i = 0; i < layersAmount; i += 1) {
-      const layer = this.createLayer(featuresAmount, i);
+      const layer = this.createLayer(pointsPerLayer, i);
       const stateLayer = fromJS({id: layer.id, visible: true, color: layer.paint['circle-color']});
+      mapBoxLayers.push(layer);
       layers = layers.withMutations(list => list.push(stateLayer));
-      this.map.addLayer(layer);
     }
+    mapBoxLayers.reverse().forEach(layer => this.map.addLayer(layer));
     this.setState({layers});
   }
 
-  createLayer(featuresAmount, id) {
+  createLayer(pointsPerLayer, id) {
     const color = MapBox.getRandomColor();
     return {
       'id': `${LAYER_NAME}_${id}`,
       'type': 'circle',
-      'source': this.prepareSource(MapBox.generateSource(featuresAmount)),
+      'source': this.prepareSource(MapBox.generateSource(pointsPerLayer)),
       'paint': {
         'circle-radius': ['get', 'size'],
         'circle-color': color,
@@ -171,13 +208,37 @@ class MapBox extends Component {
           id="map"
           className={styles.map}
         />
-        <div className={styles.controlWrapper}>
+        <div className={classNames(styles.wrapper, styles.layers)}>
           <Layers
             onChangeVisibility={this.handleChangeVisibility}
             onPaintRandomly={this.handleChangeColor}
             onMoveTop={this.handleMoveLayerOnTop}
             layers={this.state.layers}
           />
+        </div>
+        <div className={classNames(styles.wrapper, styles.form)}>
+          <div className={styles.input}>
+            <label htmlFor="layersAmount">Amount of Layers</label>
+            <input
+              id="layersAmount"
+              defaultValue={this.layersConfiguration.layersAmount}
+              ref={i => this.layersAmount = i}
+              type="number"
+            />
+          </div>
+          <div className={styles.input}>
+            <label htmlFor="pointsPerLayer">Points Per Layer</label>
+            <input
+              id="pointsPerLayer"
+              defaultValue={this.layersConfiguration.pointsPerLayer}
+              ref={i => this.pointsPerLayer = i}
+              type="number"
+            />
+          </div>
+          <button onClick={this.handleApplyNewLayers}>Apply!</button>
+        </div>
+        <div className={classNames(styles.result, styles.wrapper)}>
+          {`${(this.state.result / 1000).toFixed(3)} s`}
         </div>
       </div>
     );

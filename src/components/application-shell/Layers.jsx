@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
-import classNames from 'classnames';
 import {instanceOf, func} from 'prop-types';
 import {List} from 'immutable';
+import Icon from '../icon/Icon';
 import styles from './Layers.less';
 
 function Layers({layers, onChangeVisibility, onPaintRandomly, onMoveTop}) {
@@ -10,7 +10,7 @@ function Layers({layers, onChangeVisibility, onPaintRandomly, onMoveTop}) {
 
   return (
     <div className={styles.layers}>
-      {layers.map((layer, index) => {
+      {layers.map(layer => {
         const id = layer.get('id');
         const visible = layer.get('visible');
         return (
@@ -18,20 +18,20 @@ function Layers({layers, onChangeVisibility, onPaintRandomly, onMoveTop}) {
             key={id}
             className={styles.layer}
           >
-            <span className={styles.layerName}>{index}</span>
+            <div
+              className={styles.preview}
+              style={{backgroundColor: layer.get('color')}}
+            />
             <div className={styles.controls}>
-              <button
-                className={classNames({[styles.visible]: visible}, {[styles.hidden]: !visible})}
-                onClick={handle(onChangeVisibility)(id)}
-              >
-                {visible ? 'Hide' : 'Show'}
+              <button onClick={handle(onChangeVisibility)(id)}>
+                {
+                  visible
+                    ? <Icon icon="eyeOpened"/>
+                    : <Icon icon="eyeClosed"/>
+                }
               </button>
               <button onClick={handle(onPaintRandomly)(id)}>Paint</button>
               <button onClick={handle(onMoveTop)(id)}>Move On Top</button>
-              <div
-                className={styles.preview}
-                style={{backgroundColor: layer.get('color')}}
-              />
             </div>
           </div>
         );
