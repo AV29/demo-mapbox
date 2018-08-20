@@ -43,6 +43,7 @@ class MapBox extends Component {
     this.layersAmount = null;
 
     this.state = {
+      chartResult: [],
       layers: fromJS([]),
       ready: false,
       result: 0,
@@ -53,8 +54,8 @@ class MapBox extends Component {
       mapboxApiAccessToken: 'pk.eyJ1IjoibGxhbWFzb2Z0IiwiYSI6ImNqZm83cnJuODAxdHUzMnBtNGdjdnJmbHcifQ.FaBPhi3i57XdDfj5pleNJg'
     };
 
+    this.getTiming = this.getTiming.bind(this);
     this.handleLoaded = this.handleLoaded.bind(this);
-    this.handleRendered = this.handleRendered.bind(this);
     this.handleChangeColor = this.handleChangeColor.bind(this);
     this.handleApplyNewLayers = this.handleApplyNewLayers.bind(this);
     this.handleMoveLayerOnTop = this.handleMoveLayerOnTop.bind(this);
@@ -78,6 +79,7 @@ class MapBox extends Component {
     const zoom = 2;
     const center = [93, 50];
     this.setTiming();
+    this.setState({ready: false});
     this.map = new MapboxGl.Map({
       style: this.state.defaultStyle,
       container: 'map',
@@ -85,7 +87,7 @@ class MapBox extends Component {
       center,
       ...this.state.defaultOptions
     });
-    this.map.on('render', this.handleRendered);
+    this.map.on('render', this.getTiming);
     this.map.once('load', () => this.handleLoaded(layersConfiguration));
   }
 
@@ -97,10 +99,6 @@ class MapBox extends Component {
   handleLoaded(layersConfiguration) {
     this.map.resize();
     this.attachLayers(layersConfiguration);
-  }
-
-  handleRendered() {
-    this.getTiming();
   }
 
   getTiming() {
@@ -118,6 +116,7 @@ class MapBox extends Component {
   handleChangeVisibility(layerName) {
     const nextVisibilityState = this.map.getLayoutProperty(layerName, 'visibility') !== 'visible' ? 'visible' : 'none';
     this.map.setLayoutProperty(layerName, 'visibility', nextVisibilityState);
+    this.setTiming();
     const targetLayerIndex = this.state.layers.findIndex(layer => layer.get('id') === layerName);
     this.setState(({layers}) => ({layers: layers.setIn([targetLayerIndex, 'visible'], nextVisibilityState === 'visible')}));
   }
@@ -127,6 +126,7 @@ class MapBox extends Component {
     this.setStyle(layerName, 'circle-color', baseColor);
     this.setStyle(layerName, 'circle-stroke-color', MapBox.getRandomColor());
     const targetLayerIndex = this.state.layers.findIndex(layer => layer.get('id') === layerName);
+    this.setTiming();
     this.setState(({layers}) => ({layers: layers.setIn([targetLayerIndex, 'color'], baseColor)}));
   }
 
@@ -137,6 +137,7 @@ class MapBox extends Component {
     }
     this.map.moveLayer(layerName);
     const targetLayerIndex = this.state.layers.findIndex(layer => layer.get('id') === layerName);
+    this.setTiming();
     this.setState(({layers}) => ({layers: layers.delete(targetLayerIndex).insert(0, this.state.layers.get(targetLayerIndex))}));
   }
 
@@ -159,7 +160,7 @@ class MapBox extends Component {
       layers = layers.withMutations(list => list.push(stateLayer));
     }
     mapBoxLayers.reverse().forEach(layer => this.map.addLayer(layer));
-    this.setState({layers});
+    this.setState({layers, ready: true});
   }
 
   createLayer(pointsPerLayer, id) {
@@ -208,14 +209,17 @@ class MapBox extends Component {
           id="map"
           className={styles.map}
         />
-        <div className={classNames(styles.wrapper, styles.layers)}>
-          <Layers
-            onChangeVisibility={this.handleChangeVisibility}
-            onPaintRandomly={this.handleChangeColor}
-            onMoveTop={this.handleMoveLayerOnTop}
-            layers={this.state.layers}
-          />
-        </div>
+        {
+          this.state.ready &&
+          <div className={classNames(styles.wrapper, styles.layers)}>
+            <Layers
+              onChangeVisibility={this.handleChangeVisibility}
+              onPaintRandomly={this.handleChangeColor}
+              onMoveTop={this.handleMoveLayerOnTop}
+              layers={this.state.layers}
+            />
+          </div>
+        }
         <div className={classNames(styles.wrapper, styles.form)}>
           <div className={styles.input}>
             <label htmlFor="layersAmount">Amount of Layers</label>
