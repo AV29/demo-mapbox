@@ -20,7 +20,10 @@ class MapBox extends Component {
         'type': 'circle',
         'source': this.prepareSource(data),
         'paint': {
-          'circle-color': '#ba52f0'
+          'circle-radius': 8,
+          'circle-color': '#ba52f0',
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#000000'
           // Use a get expression (https://www.mapbox.com/mapbox-gl-js/style-spec/#expressions-get)
         }
       }
