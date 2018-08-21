@@ -262,6 +262,8 @@ class MapBox extends Component {
   }
 
   createLayer(pointsPerLayer, id) {
+    const baseColor = MapBox.getRandomColor();
+    const baseSize = MapBox.getRandomValue(5, 15);
     return {
       'id': `${LAYER_NAME}_${id}`,
       'type': 'circle',
@@ -270,8 +272,8 @@ class MapBox extends Component {
         data: this.prepareSourceData(MapBox.generateSource(pointsPerLayer))
       },
       'paint': {
-        'circle-radius': ['get', 'size'],
-        'circle-color': ['get', 'color'],
+        'circle-radius': baseSize,
+        'circle-color': baseColor,
         'circle-stroke-width': 1,
         'circle-stroke-color': MapBox.getRandomColor()
         // Use a get expression (https://www.mapbox.com/mapbox-gl-js/style-spec/#expressions-get)
@@ -280,8 +282,6 @@ class MapBox extends Component {
   }
 
   prepareSourceData(sourceData) {
-    const baseColor = MapBox.getRandomColor();
-    const baseSize = MapBox.getRandomValue(5, 15);
     return {
       type: 'FeatureCollection',
       features: sourceData.map((data, index) =>
@@ -290,8 +290,8 @@ class MapBox extends Component {
           properties: {
             'featureId': data.id,
             tooltip: data.tooltip,
-            size: baseSize,
-            color: baseColor,
+            size: 20,
+            color: '#ffffff',
             name: 'Anton',
             lastName: 'Vlasik',
             occupation: 'Developer',
