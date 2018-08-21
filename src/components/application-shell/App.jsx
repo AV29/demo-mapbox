@@ -3,6 +3,7 @@ import {fromJS} from 'immutable';
 import Layers from './Layers';
 import MapboxGl from 'mapbox-gl';
 import classNames from 'classnames';
+import '!style-loader!css-loader!mapbox-gl/dist/mapbox-gl.css';
 import styles from './App.less';
 
 const LAYER_NAME = 'DEMO_LAYER';
@@ -339,7 +340,7 @@ class MapBox extends Component {
               <button onClick={this.handleChangeVisibilityAll(true)}>Show All</button>
               <button onClick={this.handleChangeVisibilityAll(false)}>Hide All</button>
               <button onClick={this.handleResizeAll}>Resize All</button>
-              <button onClick={this.handleResizeAll}>Resize All</button>
+              <button onClick={this.handleRepaintAll}>Repaint All</button>
             </div>
             <Layers
               onChangeVisibility={this.handleChangeVisibility}
