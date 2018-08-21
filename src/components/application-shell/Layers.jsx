@@ -4,7 +4,18 @@ import {List} from 'immutable';
 import Icon from '../icon/Icon';
 import styles from './Layers.less';
 
-function Layers({layers, onChangeVisibility, onPaintRandomly, onMoveTop}) {
+function Layers(props) {
+
+  const {
+    layers,
+    onChangeVisibility,
+    onPaintRandomly,
+    onMoveTop,
+    onRepaint,
+    onRangeRepaint,
+    onChangeRangeSize,
+    onResize
+  } = props;
 
   const handle = handler => id => event => handler && handler(id);
 
@@ -30,7 +41,11 @@ function Layers({layers, onChangeVisibility, onPaintRandomly, onMoveTop}) {
                     : <Icon icon="eyeClosed"/>
                 }
               </button>
-              <button onClick={handle(onPaintRandomly)(id)}>Paint</button>
+              <button onClick={handle(onRepaint)(id)}>Re-Paint</button>
+              <button onClick={handle(onPaintRandomly)(id)}>Paint Randomly</button>
+              <button onClick={handle(onRangeRepaint)(id)}>Paint Ranges</button>
+              <button onClick={handle(onChangeRangeSize)(id)}>Size Ranges</button>
+              <button onClick={handle(onResize)(id)}>Re-Size</button>
               <button onClick={handle(onMoveTop)(id)}>Move On Top</button>
             </div>
           </div>
@@ -43,7 +58,11 @@ function Layers({layers, onChangeVisibility, onPaintRandomly, onMoveTop}) {
 Layers.propTypes = {
   layers: instanceOf(List),
   onChangeVisibility: func,
+  onRepaint: func,
   onPaintRandomly: func,
+  onRangeRepaint: func,
+  onChangeRangeSize: func,
+  onResize: func,
   onMoveTop: func
 };
 
