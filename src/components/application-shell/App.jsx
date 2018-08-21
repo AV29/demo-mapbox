@@ -373,10 +373,10 @@ class MapBox extends Component {
               type="number"
             />
           </div>
-          <button onClick={this.handleApplyNewLayers}>Apply!</button>
-        </div>
-        <div className={classNames(styles.result, styles.fixedWrapper)}>
-          {`${(this.state.result / 1000).toFixed(3)} s`}
+          <div className={styles.formControls}>
+            <button onClick={this.handleApplyNewLayers}>Apply!</button>
+            <span className={styles.result}>{`${(this.state.result / 1000).toFixed(3)} s`}</span>
+          </div>
         </div>
       </div>
     );
