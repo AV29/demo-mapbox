@@ -91,6 +91,7 @@ class MapBox extends Component {
     };
 
     this.getTiming = this.getTiming.bind(this);
+    this.detachLayer = this.detachLayer.bind(this);
     this.handleLoaded = this.handleLoaded.bind(this);
     this.changeSourceProperties = this.changeSourceProperties.bind(this);
     this.handleChangeSize = this.handleChangeSize.bind(this);
@@ -160,6 +161,11 @@ class MapBox extends Component {
 
   handleChangeLayerType({target: {value}}) {
     this.setState({layerType: value});
+    this.state.layers.forEach(layer => {
+      const layerId = layer.get('id');
+      this.detachLayer(layerId);
+      this.map.addLayer(this.createLayer(layerId, LAYER_TYPES.circle));
+    });
   }
 
   handleChangeVisibility(layerName) {
@@ -258,7 +264,9 @@ class MapBox extends Component {
     let layers = fromJS([]);
     const mapBoxLayers = [];
     for (let i = 0; i < layersAmount; i += 1) {
-      const layer = this.createLayer(pointsPerLayer, i, layerType);
+      const layerId = `${LAYER_NAME}_${i}`;
+      this.map.addSource(layerId, this.prepareSource(pointsPerLayer));
+      const layer = this.createLayer(layerId, layerType);
       const source = this.map.getSource(layer.source);
       const stateLayer = fromJS({
         id: layer.id,
@@ -275,14 +283,13 @@ class MapBox extends Component {
     this.setState({layers, ready: true});
   }
 
-  createLayer(pointsPerLayer, id, type) {
+  createLayer(id, type) {
     const baseColor = MapBox.getRandomColor();
     const baseSize = MapBox.getRandomValue(5, 15);
-    this.map.addSource(`${LAYER_NAME}_${id}`, this.prepareSource(pointsPerLayer));
     return {
-      id: `${LAYER_NAME}_${id}`,
+      id,
+      source: id,
       type,
-      source: `${LAYER_NAME}_${id}`,
       paint: {
         'circle-radius': baseSize,
         'circle-color': baseColor,
@@ -342,6 +349,10 @@ class MapBox extends Component {
     };
     this.map.getSource(layerName).setData(newSourceData);
     this.setState(({layers}) => ({layers: layers.mergeIn([targetLayerIndex], {features})}));
+  }
+
+  detachLayer(layerId) {
+    this.map.getLayer(layerId) && this.map.removeLayer(layerId);
   }
 
   render() {
