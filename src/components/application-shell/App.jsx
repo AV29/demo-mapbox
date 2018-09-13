@@ -7,6 +7,10 @@ import '!style-loader!css-loader!mapbox-gl/dist/mapbox-gl.css';
 import styles from './App.less';
 
 const LAYER_NAME = 'DEMO_LAYER';
+const LAYER_TYPES = {
+  circle: 'circle',
+  symbol: 'symbol'
+};
 
 const config = {
   color: 'circle-color',
@@ -74,6 +78,7 @@ class MapBox extends Component {
     this.layersAmount = null;
 
     this.state = {
+      layerType: LAYER_TYPES.circle,
       chartResult: [],
       layers: fromJS([]),
       ready: false,
@@ -99,6 +104,7 @@ class MapBox extends Component {
     this.handleRepaintAll = this.handleRepaintAll.bind(this);
     this.handleResizeAll = this.handleResizeAll.bind(this);
     this.handleChangeVisibilityAll = this.handleChangeVisibilityAll.bind(this);
+    this.handleChangeLayerType = this.handleChangeLayerType.bind(this);
   }
 
   /* --------------------------------------------- React LifeCycle ---------------------------------------------------*/
@@ -150,6 +156,10 @@ class MapBox extends Component {
 
   setStyle(layerName, propName, value) {
     this.map.setPaintProperty(layerName, propName, value);
+  }
+
+  handleChangeLayerType({target: {value}}) {
+    this.setState({layerType: value});
   }
 
   handleChangeVisibility(layerName) {
@@ -244,41 +254,49 @@ class MapBox extends Component {
     this.initialize(layersConfiguration);
   }
 
-  attachLayers({layersAmount, pointsPerLayer}) {
+  attachLayers({layersAmount, pointsPerLayer, layerType = LAYER_TYPES.circle}) {
     let layers = fromJS([]);
     const mapBoxLayers = [];
     for (let i = 0; i < layersAmount; i += 1) {
-      const layer = this.createLayer(pointsPerLayer, i);
+      const layer = this.createLayer(pointsPerLayer, i, layerType);
+      const source = this.map.getSource(layer.source);
       const stateLayer = fromJS({
         id: layer.id,
         visible: true,
         color: layer.paint['circle-color'],
-        features: layer.source.data.features
+        features: source._data.features
       });
       mapBoxLayers.push(layer);
       layers = layers.withMutations(list => list.push(stateLayer));
     }
-    mapBoxLayers.reverse().forEach(layer => this.map.addLayer(layer));
+    mapBoxLayers.reverse().forEach(layer => {
+      this.map.addLayer(layer);
+    });
     this.setState({layers, ready: true});
   }
 
-  createLayer(pointsPerLayer, id) {
+  createLayer(pointsPerLayer, id, type) {
     const baseColor = MapBox.getRandomColor();
     const baseSize = MapBox.getRandomValue(5, 15);
+    this.map.addSource(`${LAYER_NAME}_${id}`, this.prepareSource(pointsPerLayer));
     return {
-      'id': `${LAYER_NAME}_${id}`,
-      'type': 'circle',
-      'source': {
-        type: 'geojson',
-        data: this.prepareSourceData(MapBox.generateSource(pointsPerLayer))
-      },
-      'paint': {
+      id: `${LAYER_NAME}_${id}`,
+      type,
+      source: `${LAYER_NAME}_${id}`,
+      paint: {
         'circle-radius': baseSize,
         'circle-color': baseColor,
         'circle-stroke-width': 1,
         'circle-stroke-color': MapBox.getRandomColor()
         // Use a get expression (https://www.mapbox.com/mapbox-gl-js/style-spec/#expressions-get)
       }
+    };
+  }
+
+  prepareSource(pointsPerLayer) {
+    return {
+      type: 'geojson',
+      data: this.prepareSourceData(MapBox.generateSource(pointsPerLayer))
     };
   }
 
@@ -337,6 +355,40 @@ class MapBox extends Component {
           this.state.ready &&
           <div className={classNames(styles.fixedWrapper, styles.layers)}>
             <div className={styles.mainControls}>
+              <div className={styles.layerTypes}>
+                <div className={styles.layerType}>
+                  <input
+                    type="radio"
+                    name="layerType"
+                    id={LAYER_TYPES.circle}
+                    value={LAYER_TYPES.circle}
+                    checked={this.state.layerType === LAYER_TYPES.circle}
+                    onChange={this.handleChangeLayerType}
+                  />
+                  <label
+                    htmlFor={LAYER_TYPES.circle}
+                    className="radio-input-label"
+                  >
+                    Point
+                  </label>
+                </div>
+                <div className={styles.layerType}>
+                  <input
+                    type="radio"
+                    name="layerType"
+                    id={LAYER_TYPES.symbol}
+                    value={LAYER_TYPES.symbol}
+                    checked={this.state.layerType === LAYER_TYPES.symbol}
+                    onChange={this.handleChangeLayerType}
+                  />
+                  <label
+                    htmlFor={LAYER_TYPES.symbol}
+                    className="radio-input-label"
+                  >
+                    Symbol
+                  </label>
+                </div>
+              </div>
               <button onClick={this.handleChangeVisibilityAll(true)}>Show All</button>
               <button onClick={this.handleChangeVisibilityAll(false)}>Hide All</button>
               <button onClick={this.handleResizeAll}>Resize All</button>
