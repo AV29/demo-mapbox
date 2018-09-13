@@ -45,6 +45,50 @@ class MapBox extends Component {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
+  static createLayer(id, type) {
+    return {
+      id,
+      source: id,
+      type,
+      ...MapBox.getPaintAndLayout(type)
+    };
+  }
+
+  static getPaintAndLayout(layerType) {
+    const baseColor = MapBox.getRandomColor();
+    const baseSize = MapBox.getRandomValue(5, 15);
+    switch (layerType) {
+      case LAYER_TYPES.circle: {
+        return {
+          paint: {
+            'circle-radius': baseSize,
+            'circle-color': baseColor,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': MapBox.getRandomColor()
+          },
+          layout: {
+            visibility: 'visible'
+          }
+        };
+      }
+
+      case LAYER_TYPES.symbol: {
+        return {
+          paint: {
+            'icon-color': baseColor,
+            'icon-halo-width': 1,
+            'icon-halo-color': MapBox.getRandomColor()
+          },
+          layout: {
+            visibility: 'visible',
+            'icon-image': 'cat',
+            'icon-size': 0.4
+          }
+        };
+      }
+    }
+  }
+
   static rangeColors(data) {
     const latitude = data.getIn(['properties', 'latitude']);
     const longitude = data.getIn(['properties', 'longitude']);
@@ -93,19 +137,19 @@ class MapBox extends Component {
     this.getTiming = this.getTiming.bind(this);
     this.detachLayer = this.detachLayer.bind(this);
     this.handleLoaded = this.handleLoaded.bind(this);
-    this.changeSourceProperties = this.changeSourceProperties.bind(this);
+    this.handleResizeAll = this.handleResizeAll.bind(this);
+    this.handleRepaintAll = this.handleRepaintAll.bind(this);
     this.handleChangeSize = this.handleChangeSize.bind(this);
     this.handleChangeColor = this.handleChangeColor.bind(this);
     this.handleApplyNewLayers = this.handleApplyNewLayers.bind(this);
     this.handleMoveLayerOnTop = this.handleMoveLayerOnTop.bind(this);
-    this.handleChangeVisibility = this.handleChangeVisibility.bind(this);
-    this.handleChangeRandomColor = this.handleChangeRandomColor.bind(this);
-    this.handleChangeRangeColor = this.handleChangeRangeColor.bind(this);
-    this.handleChangeRangeSize = this.handleChangeRangeSize.bind(this);
-    this.handleRepaintAll = this.handleRepaintAll.bind(this);
-    this.handleResizeAll = this.handleResizeAll.bind(this);
-    this.handleChangeVisibilityAll = this.handleChangeVisibilityAll.bind(this);
     this.handleChangeLayerType = this.handleChangeLayerType.bind(this);
+    this.handleChangeRangeSize = this.handleChangeRangeSize.bind(this);
+    this.handleChangeRangeColor = this.handleChangeRangeColor.bind(this);
+    this.handleChangeVisibility = this.handleChangeVisibility.bind(this);
+    this.changeSourceProperties = this.changeSourceProperties.bind(this);
+    this.handleChangeRandomColor = this.handleChangeRandomColor.bind(this);
+    this.handleChangeVisibilityAll = this.handleChangeVisibilityAll.bind(this);
   }
 
   /* --------------------------------------------- React LifeCycle ---------------------------------------------------*/
@@ -144,7 +188,11 @@ class MapBox extends Component {
 
   handleLoaded(layersConfiguration) {
     this.map.resize();
-    this.attachLayers(layersConfiguration);
+    this.map.loadImage('https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Cat_silhouette.svg/400px-Cat_silhouette.svg.png', (err, image) => {
+      if (err) throw err;
+      this.map.addImage('cat', image, {sdf: false});
+      this.attachLayers(layersConfiguration);
+    });
   }
 
   getTiming() {
@@ -161,10 +209,11 @@ class MapBox extends Component {
 
   handleChangeLayerType({target: {value}}) {
     this.setState({layerType: value});
+    this.setTiming();
     this.state.layers.forEach(layer => {
       const layerId = layer.get('id');
       this.detachLayer(layerId);
-      this.map.addLayer(this.createLayer(layerId, LAYER_TYPES.circle));
+      this.map.addLayer(MapBox.createLayer(layerId, value));
     });
   }
 
@@ -254,7 +303,8 @@ class MapBox extends Component {
   handleApplyNewLayers() {
     const layersConfiguration = {
       layersAmount: parseInt(this.layersAmount.value),
-      pointsPerLayer: parseInt(this.pointsPerLayer.value)
+      pointsPerLayer: parseInt(this.pointsPerLayer.value),
+      layerType: this.state.layerType
     };
     this.destroy();
     this.initialize(layersConfiguration);
@@ -266,7 +316,7 @@ class MapBox extends Component {
     for (let i = 0; i < layersAmount; i += 1) {
       const layerId = `${LAYER_NAME}_${i}`;
       this.map.addSource(layerId, this.prepareSource(pointsPerLayer));
-      const layer = this.createLayer(layerId, layerType);
+      const layer = MapBox.createLayer(layerId, layerType);
       const source = this.map.getSource(layer.source);
       const stateLayer = fromJS({
         id: layer.id,
@@ -281,23 +331,6 @@ class MapBox extends Component {
       this.map.addLayer(layer);
     });
     this.setState({layers, ready: true});
-  }
-
-  createLayer(id, type) {
-    const baseColor = MapBox.getRandomColor();
-    const baseSize = MapBox.getRandomValue(5, 15);
-    return {
-      id,
-      source: id,
-      type,
-      paint: {
-        'circle-radius': baseSize,
-        'circle-color': baseColor,
-        'circle-stroke-width': 1,
-        'circle-stroke-color': MapBox.getRandomColor()
-        // Use a get expression (https://www.mapbox.com/mapbox-gl-js/style-spec/#expressions-get)
-      }
-    };
   }
 
   prepareSource(pointsPerLayer) {
