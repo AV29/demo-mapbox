@@ -38,7 +38,8 @@ const CONFIG = {
     },
     size: {
       name: 'icon-size',
-      type: 'layout'
+      type: 'layout',
+      factor: 100
     }
   }
 };
@@ -111,7 +112,7 @@ class MapBox extends Component {
             visibility: 'visible',
             'icon-allow-overlap': true,
             'icon-image': 'cat',
-            'icon-size': baseSize / 100
+            'icon-size': baseSize / CONFIG[LAYER_TYPES.symbol].size.factor
           }
         };
       }
@@ -126,13 +127,18 @@ class MapBox extends Component {
       : data.mergeIn(['properties'], {color: '#67ff67'});
   }
 
-  static rangeSize(data) {
-    const latitude = data.getIn(['properties', 'latitude']);
-    const longitude = data.getIn(['properties', 'longitude']);
-    const previousSize = data.getIn(['properties', 'size']);
-    return (latitude > 0 && latitude < 50 && longitude > 0 && longitude < 50)
-      ? data.mergeIn(['properties'], {size: previousSize * 2})
-      : data.mergeIn(['properties'], {size: previousSize / 2});
+  static rangeSize(layerType) {
+    return function(data) {
+      const latitude = data.getIn(['properties', 'latitude']);
+      const longitude = data.getIn(['properties', 'longitude']);
+      const biggerSizeValue = MapBox.getRandomValue(10, 15);
+      const smallerSizeValue = MapBox.getRandomValue(5, 10);
+      const biggerSize = layerType === LAYER_TYPES.symbol ? biggerSizeValue / 100 : biggerSizeValue;
+      const smallerSize = layerType === LAYER_TYPES.symbol ? smallerSizeValue / 100 : smallerSizeValue;
+      return (latitude > 0 && latitude < 50 && longitude > 0 && longitude < 50)
+        ? data.mergeIn(['properties'], {size: biggerSize})
+        : data.mergeIn(['properties'], {size: smallerSize});
+    };
   }
 
   static randomizeColors(data) {
@@ -149,6 +155,7 @@ class MapBox extends Component {
 
     this.pointsPerLayer = null;
     this.layersAmount = null;
+    this.catPath = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Cat_silhouette.svg/400px-Cat_silhouette.svg.png';
 
     this.state = {
       layerType: LAYER_TYPES.circle,
@@ -217,7 +224,7 @@ class MapBox extends Component {
 
   handleLoaded(layersConfiguration) {
     this.map.resize();
-    this.map.loadImage('https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Cat_silhouette.svg/400px-Cat_silhouette.svg.png', (err, image) => {
+    this.map.loadImage(this.catPath, (err, image) => {
       if (err) throw err;
       this.map.addImage('cat', image, {sdf: true});
       this.attachLayers(layersConfiguration);
@@ -233,6 +240,7 @@ class MapBox extends Component {
   }
 
   setStyle(layerName, prop, value) {
+    value = typeof value === 'number' ? value / (prop.factor || 1) : value;
     if (prop.type === 'paint') {
       this.map.setPaintProperty(layerName, prop.name, value);
     } else if (prop.type === 'layout') {
@@ -316,7 +324,7 @@ class MapBox extends Component {
   }
 
   handleChangeRangeSize(layerName) {
-    this.changeSourceProperties(layerName, 'size', MapBox.rangeSize);
+    this.changeSourceProperties(layerName, 'size', MapBox.rangeSize(this.state.layerType));
     this.setTiming();
   }
 
@@ -377,7 +385,7 @@ class MapBox extends Component {
     };
   }
 
-  prepareSourceData(sourceData) {
+  prepareSourceData(sourceData, layerType) {
     return {
       type: 'FeatureCollection',
       features: sourceData.map((data, index) =>
