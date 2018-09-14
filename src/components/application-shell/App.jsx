@@ -12,9 +12,35 @@ const LAYER_TYPES = {
   symbol: 'symbol'
 };
 
-const config = {
-  color: 'circle-color',
-  size: 'circle-radius'
+const CONFIG = {
+  [LAYER_TYPES.circle]: {
+    color: {
+      name: 'circle-color',
+      type: 'paint'
+    },
+    borderColor: {
+      name: 'circle-stroke-color',
+      type: 'paint'
+    },
+    size: {
+      name: 'circle-radius',
+      type: 'paint'
+    }
+  },
+  [LAYER_TYPES.symbol]: {
+    color: {
+      name: 'icon-color',
+      type: 'paint'
+    },
+    borderColor: {
+      name: 'icon-halo-color',
+      type: 'paint'
+    },
+    size: {
+      name: 'icon-size',
+      type: 'layout'
+    }
+  }
 };
 
 class MapBox extends Component {
@@ -75,14 +101,16 @@ class MapBox extends Component {
       case LAYER_TYPES.symbol: {
         return {
           paint: {
-            'icon-color': baseColor,
+            'icon-color': 'red',
+            'icon-opacity': 1,
             'icon-halo-width': 1,
             'icon-halo-color': MapBox.getRandomColor()
           },
           layout: {
             visibility: 'visible',
+            'icon-allow-overlap': true,
             'icon-image': 'cat',
-            'icon-size': 0.4
+            'icon-size': baseSize / 100
           }
         };
       }
@@ -190,7 +218,7 @@ class MapBox extends Component {
     this.map.resize();
     this.map.loadImage('https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Cat_silhouette.svg/400px-Cat_silhouette.svg.png', (err, image) => {
       if (err) throw err;
-      this.map.addImage('cat', image, {sdf: false});
+      this.map.addImage('cat', image, {sdf: true});
       this.attachLayers(layersConfiguration);
     });
   }
@@ -203,8 +231,13 @@ class MapBox extends Component {
     this.start = performance.now();
   }
 
-  setStyle(layerName, propName, value) {
-    this.map.setPaintProperty(layerName, propName, value);
+  setStyle(layerName, prop, value) {
+    const {name, type} = prop;
+    if (type === 'paint') {
+      this.map.setPaintProperty(layerName, name, value);
+    } else if (type === 'layout') {
+      this.map.setLayoutProperty(layerName, name, value);
+    }
   }
 
   handleChangeLayerType({target: {value}}) {
@@ -227,8 +260,8 @@ class MapBox extends Component {
 
   handleChangeColor(layerName) {
     const baseColor = MapBox.getRandomColor();
-    this.setStyle(layerName, 'circle-color', baseColor);
-    this.setStyle(layerName, 'circle-stroke-color', MapBox.getRandomColor());
+    this.setStyle(layerName, CONFIG[this.state.layerType].color, baseColor);
+    this.setStyle(layerName, CONFIG[this.state.layerType].borderColor, MapBox.getRandomColor());
     const targetLayerIndex = this.state.layers.findIndex(layer => layer.get('id') === layerName);
     this.setTiming();
     this.setState(({layers}) => ({layers: layers.setIn([targetLayerIndex, 'color'], baseColor)}));
@@ -239,7 +272,7 @@ class MapBox extends Component {
     this.setTiming();
     this.state.layers.forEach(layer => {
       const color = MapBox.getRandomColor();
-      this.setStyle(layer.get('id'), 'circle-color', color);
+      this.setStyle(layer.get('id'), CONFIG[this.state.layerType].color, color);
       layers = layers.withMutations(list => list.push(layer.merge({color})));
     });
     this.setState({layers});
@@ -250,7 +283,7 @@ class MapBox extends Component {
     this.setTiming();
     this.state.layers.forEach(layer => {
       const size = MapBox.getRandomValue(5, 15);
-      this.setStyle(layer.get('id'), 'circle-radius', size);
+      this.setStyle(layer.get('id'), CONFIG[this.state.layerType].size, size);
       layers = layers.withMutations(list => list.push(layer.merge({size})));
     });
     this.setState({layers});
@@ -270,7 +303,7 @@ class MapBox extends Component {
 
   handleChangeSize(layerName) {
     const size = MapBox.getRandomValue(5, 15);
-    this.setStyle(layerName, 'circle-radius', size);
+    this.setStyle(layerName, CONFIG[this.state.layerType].size, size);
     this.setTiming();
   }
 
@@ -374,7 +407,7 @@ class MapBox extends Component {
 
   changeSourceProperties(layerName, prop, predicate) {
     const targetLayerIndex = this.state.layers.findIndex(layer => layer.get('id') === layerName);
-    this.setStyle(layerName, config[prop], ['get', prop]);
+    this.setStyle(layerName, CONFIG[this.state.layerType][prop], ['get', prop]);
     const features = this.state.layers.getIn([targetLayerIndex, 'features']).map(predicate);
     const newSourceData = {
       type: 'FeatureCollection',
