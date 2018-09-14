@@ -71,18 +71,19 @@ class MapBox extends Component {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  static createLayer(id, type) {
+  static createLayer(id, type, paintOptions) {
     return {
       id,
       source: id,
       type,
-      ...MapBox.getPaintAndLayout(type)
+      ...MapBox.getPaintAndLayout(type, paintOptions)
     };
   }
 
-  static getPaintAndLayout(layerType) {
-    const baseColor = MapBox.getRandomColor();
-    const baseSize = MapBox.getRandomValue(5, 15);
+  static getPaintAndLayout(layerType, options = {}) {
+    const baseColor = options.baseColor || MapBox.getRandomColor();
+    const baseSize = options.baseSize || MapBox.getRandomValue(5, 15);
+    const borderColor = options.borderColor || MapBox.getRandomColor();
     switch (layerType) {
       case LAYER_TYPES.circle: {
         return {
@@ -90,7 +91,7 @@ class MapBox extends Component {
             'circle-radius': baseSize,
             'circle-color': baseColor,
             'circle-stroke-width': 1,
-            'circle-stroke-color': MapBox.getRandomColor()
+            'circle-stroke-color': borderColor
           },
           layout: {
             visibility: 'visible'
@@ -101,10 +102,10 @@ class MapBox extends Component {
       case LAYER_TYPES.symbol: {
         return {
           paint: {
-            'icon-color': 'red',
+            'icon-color': baseColor,
             'icon-opacity': 1,
             'icon-halo-width': 1,
-            'icon-halo-color': MapBox.getRandomColor()
+            'icon-halo-color': borderColor
           },
           layout: {
             visibility: 'visible',
@@ -232,11 +233,10 @@ class MapBox extends Component {
   }
 
   setStyle(layerName, prop, value) {
-    const {name, type} = prop;
-    if (type === 'paint') {
-      this.map.setPaintProperty(layerName, name, value);
-    } else if (type === 'layout') {
-      this.map.setLayoutProperty(layerName, name, value);
+    if (prop.type === 'paint') {
+      this.map.setPaintProperty(layerName, prop.name, value);
+    } else if (prop.type === 'layout') {
+      this.map.setLayoutProperty(layerName, prop.name, value);
     }
   }
 
@@ -245,8 +245,10 @@ class MapBox extends Component {
     this.setTiming();
     this.state.layers.forEach(layer => {
       const layerId = layer.get('id');
+      const baseColor = layer.get('color');
+      const borderColor = layer.get('borderColor');
       this.detachLayer(layerId);
-      this.map.addLayer(MapBox.createLayer(layerId, value));
+      this.map.addLayer(MapBox.createLayer(layerId, value, {baseColor, borderColor}));
     });
   }
 
@@ -259,12 +261,13 @@ class MapBox extends Component {
   }
 
   handleChangeColor(layerName) {
-    const baseColor = MapBox.getRandomColor();
-    this.setStyle(layerName, CONFIG[this.state.layerType].color, baseColor);
-    this.setStyle(layerName, CONFIG[this.state.layerType].borderColor, MapBox.getRandomColor());
+    const color = MapBox.getRandomColor();
+    const borderColor = MapBox.getRandomColor();
+    this.setStyle(layerName, CONFIG[this.state.layerType].color, color);
+    this.setStyle(layerName, CONFIG[this.state.layerType].borderColor, borderColor);
     const targetLayerIndex = this.state.layers.findIndex(layer => layer.get('id') === layerName);
     this.setTiming();
-    this.setState(({layers}) => ({layers: layers.setIn([targetLayerIndex, 'color'], baseColor)}));
+    this.setState(({layers}) => ({layers: layers.mergeIn([targetLayerIndex], {color, borderColor})}));
   }
 
   handleRepaintAll() {
@@ -354,7 +357,8 @@ class MapBox extends Component {
       const stateLayer = fromJS({
         id: layer.id,
         visible: true,
-        color: layer.paint['circle-color'],
+        color: layer.paint[CONFIG[this.state.layerType].color.name],
+        borderColor: layer.paint[CONFIG[this.state.layerType].borderColor.name],
         features: source._data.features
       });
       mapBoxLayers.push(layer);
@@ -384,6 +388,7 @@ class MapBox extends Component {
             tooltip: data.tooltip,
             size: 20,
             color: '#ffffff',
+            borderColor: '#ffffff',
             name: 'Anton',
             lastName: 'Vlasik',
             occupation: 'Developer',
