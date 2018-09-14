@@ -11,7 +11,7 @@
     "remove-dist": "rimraf ./dist",
     "prebuild": "npm-run-all clean-dist lint",
     "build": "babel-node tools/build.js",
-    "postbuild": "babel-node tools/serverProd.js",
+    "go": "npm run build && babel-node tools/serverProd.js",
     "ultimate": "npm install && npm run build"
   },
   "repository": {
