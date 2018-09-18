@@ -14,10 +14,11 @@ function Layers(props) {
     onRepaint,
     onRangeRepaint,
     onChangeRangeSize,
-    onResize
+    onResize,
+    onChangeBorderWidth
   } = props;
 
-  const handle = handler => id => event => handler && handler(id);
+  const handle = handler => id => event => handler && handler(id, event);
 
   return (
     <div className={styles.layers}>
@@ -47,6 +48,13 @@ function Layers(props) {
               <button onClick={handle(onChangeRangeSize)(id)}>Size Ranges</button>
               <button onClick={handle(onResize)(id)}>Re-Size</button>
               <button onClick={handle(onMoveTop)(id)}>Move On Top</button>
+              <span className={styles.borderControl}>
+                Border width:
+                <input
+                  type="number"
+                  onBlur={handle(onChangeBorderWidth)(id)}
+                />
+              </span>
             </div>
           </div>
         );
@@ -62,6 +70,7 @@ Layers.propTypes = {
   onPaintRandomly: func,
   onRangeRepaint: func,
   onChangeRangeSize: func,
+  onChangeBorderWidth: func,
   onResize: func,
   onMoveTop: func
 };

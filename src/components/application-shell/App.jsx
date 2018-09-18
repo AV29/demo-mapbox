@@ -22,6 +22,10 @@ const CONFIG = {
       name: 'circle-stroke-color',
       type: 'paint'
     },
+    borderWidth: {
+      name: 'circle-stroke-width',
+      type: 'paint'
+    },
     size: {
       name: 'circle-radius',
       type: 'paint'
@@ -34,6 +38,10 @@ const CONFIG = {
     },
     borderColor: {
       name: 'icon-halo-color',
+      type: 'paint'
+    },
+    borderWidth: {
+      name: 'icon-halo-width',
       type: 'paint'
     },
     size: {
@@ -105,7 +113,7 @@ class MapBox extends Component {
           paint: {
             'icon-color': baseColor,
             'icon-opacity': 1,
-            'icon-halo-width': 1,
+            'icon-halo-width': 0.5,
             'icon-halo-color': borderColor
           },
           layout: {
@@ -128,7 +136,7 @@ class MapBox extends Component {
   }
 
   static rangeSize(layerType) {
-    return function(data) {
+    return function (data) {
       const latitude = data.getIn(['properties', 'latitude']);
       const longitude = data.getIn(['properties', 'longitude']);
       const biggerSizeValue = MapBox.getRandomValue(10, 15);
@@ -186,6 +194,7 @@ class MapBox extends Component {
     this.changeSourceProperties = this.changeSourceProperties.bind(this);
     this.handleChangeRandomColor = this.handleChangeRandomColor.bind(this);
     this.handleChangeVisibilityAll = this.handleChangeVisibilityAll.bind(this);
+    this.handleChangeBorderWidth = this.handleChangeBorderWidth.bind(this);
   }
 
   /* --------------------------------------------- React LifeCycle ---------------------------------------------------*/
@@ -315,6 +324,11 @@ class MapBox extends Component {
   handleChangeSize(layerName) {
     const size = MapBox.getRandomValue(5, 15);
     this.setStyle(layerName, CONFIG[this.state.layerType].size, size);
+    this.setTiming();
+  }
+
+  handleChangeBorderWidth(layerName, event) {
+    this.setStyle(layerName, CONFIG[this.state.layerType].borderWidth, parseFloat(event.target.value));
     this.setTiming();
   }
 
@@ -490,6 +504,7 @@ class MapBox extends Component {
               onRangeRepaint={this.handleChangeRangeColor}
               onRepaint={this.handleChangeColor}
               onResize={this.handleChangeSize}
+              onChangeBorderWidth={this.handleChangeBorderWidth}
               onChangeRangeSize={this.handleChangeRangeSize}
               onMoveTop={this.handleMoveLayerOnTop}
               layers={this.state.layers}
